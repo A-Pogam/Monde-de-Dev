@@ -20,9 +20,7 @@ import lombok.Data;
 @Data
 @Table(name = "themes")
 public class Themes {
-    /**
-     * Primary key and unique identifier for the theme.
-     */
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
@@ -30,22 +28,16 @@ public class Themes {
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    /**
-     * Description of the theme.
-     */
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    /**
-     * Timestamp indicating when the theme was created.
-     */
+
     @Column(name = "createdat", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", nullable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    /**
-     * Timestamp indicating the last update time of the theme.
-     */
+
     @Column(name = "updatedat", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", nullable = false)
     @UpdateTimestamp
     private LocalDateTime updatedAt;
