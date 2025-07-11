@@ -14,12 +14,7 @@ import com.openclassrooms.p6.payload.response.UserInfoResponse;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
-    /**
-     * Maps a Users object to a UserInfoResponse object.
-     * 
-     * @param request The Users object to be mapped.
-     * @return The mapped UserInfoResponse object.
-     */
+  
     @Mappings({
             @Mapping(target = "id", ignore = false),
             @Mapping(target = "created_at", source = "createdAt"),
