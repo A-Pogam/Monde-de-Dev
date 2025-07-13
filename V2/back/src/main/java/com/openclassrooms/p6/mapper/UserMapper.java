@@ -14,7 +14,7 @@ import com.openclassrooms.p6.payload.response.UserInfoResponse;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
-  
+
     @Mappings({
             @Mapping(target = "id", ignore = false),
             @Mapping(target = "created_at", source = "createdAt"),
