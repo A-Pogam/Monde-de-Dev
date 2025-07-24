@@ -127,7 +127,7 @@ public class ArticlesController {
      *         operation.
      * @throws ApiException if there is an error in the API.
      */
-    @GetMapping("/")
+    @GetMapping("/{id}")
     public ResponseEntity<?> getArticlesById(@RequestParam final Long articleId,
             @Valid @RequestHeader("Authorization") String authorizationHeader) {
         try {
@@ -168,7 +168,7 @@ public class ArticlesController {
      * @return ResponseEntity<?> The response entity containing the result of the
      *         operation.
      */
-    @PostMapping("/")
+    @PostMapping("")
     public ResponseEntity<?> postArticle(
             @RequestParam final Long themeId,
             @Valid @RequestBody ArticleRequest request, BindingResult bindingResult,
