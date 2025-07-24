@@ -9,10 +9,6 @@ import org.mapstruct.Mappings;
 import com.openclassrooms.p6.model.Articles;
 import com.openclassrooms.p6.payload.response.ArticleSummaryResponse;
 
-/**
- * Interface defining methods for mapping between {@link Articles} and
- * {@link ArticleSummaryResponse}.
- */
 @Mapper(componentModel = "spring")
 public interface ArticleMapper {
 
