@@ -91,6 +91,10 @@ public class ArticlesController {
     @Autowired
     private ThemeService themeService;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
+
     /**
      * Registers a new user.
      *
@@ -221,9 +225,8 @@ public class ArticlesController {
      */
     private Long verifyUserValidityFromToken(String authorizationHeader) {
         String jwtToken = JwtUtil.extractJwtFromHeader(authorizationHeader);
+        Optional<Long> optionalUserIdFromToken = jwtUtil.extractUserId(jwtToken);
 
-        // Extract user ID from JWT
-        Optional<Long> optionalUserIdFromToken = JwtUtil.extractUserId(jwtToken);
 
         Boolean hasJwtExtractionError = optionalUserIdFromToken.isEmpty();
         if (hasJwtExtractionError) {

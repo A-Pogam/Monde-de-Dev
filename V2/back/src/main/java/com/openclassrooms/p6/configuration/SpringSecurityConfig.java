@@ -7,6 +7,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
  * This class is a configuration class that sets up the security configuration
@@ -17,43 +18,26 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SpringSecurityConfig {
 
-    private static final String[] AUTHENTICATION_NEEDED_ROUTES = {
-            "/api/users/**",
-            "/api/themes/**",
-            "/api/articles/**",
-            "/api/auth/**",
-    };
-    public static final String passwordEncoder = null;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    /**
-     * Configures the security filter chain by disabling CSRF protection, setting
-     * the session creation policy to stateless,
-     * and defining authorization rules for specific routes.
-     * 
-     * @param http the HttpSecurity object to configure the security filter chain
-     * @return the configured SecurityFilterChain
-     * @throws Exception if an error occurs during configuration
-     */
+    public SpringSecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
         http.csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests((authorize) -> authorize.requestMatchers(
-                        AUTHENTICATION_NEEDED_ROUTES).permitAll().anyRequest().authenticated());
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll())
+
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    /**
-     * Creates a BCryptPasswordEncoder bean.
-     * 
-     * @return the BCryptPasswordEncoder bean
-     */
     @Bean
     BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
 }

@@ -1,18 +1,15 @@
 package com.openclassrooms.p6.controllers;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.openclassrooms.p6.exception.ApiException;
 import com.openclassrooms.p6.exception.GlobalExceptionHandler;
@@ -26,147 +23,102 @@ import com.openclassrooms.p6.utils.JwtUtil;
 
 import jakarta.validation.Valid;
 
-/**
- * This class represents the UsersController in the application. It is
- * responsible for handling user-related operations.
- * The UsersController class is annotated with {@code @RestController}
- * and {@code @RequestMapping} to define the base URL for all user-related
- * endpoints.
- * It also has the {@code @CrossOrigin} annotation to allow cross-origin
- * requests from
- * any domain.
- */
 @CrossOrigin("*")
 @RestController
 @RequestMapping("/api/users")
 public class UsersController {
 
-    /**
-     * UserService to manage user-related operations.
-     */
     @Autowired
     UserService userService;
 
-    /**
-     * UserMapper for converting between entity and DTO types.
-     */
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
+
     @GetMapping("")
-    public ResponseEntity<?> getUserInfo(
-            @RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<?> getUserInfo(Authentication authentication) {
         try {
-            Long userId = verifyUserValidityFromToken(authorizationHeader);
-
+            Long userId = (Long) authentication.getPrincipal();
             Users user = getVerifiedUserById(userId);
-
             UserInfoResponse response = userMapper.toDtoUser(user);
-
-            return ResponseEntity.status(HttpStatus.OK).body(response);
+            return ResponseEntity.ok(response);
         } catch (ApiException e) {
             return GlobalExceptionHandler.handleApiException(e);
         }
     }
 
     @PutMapping("")
-    public ResponseEntity<?> update(@Valid @RequestBody UserRequest request,
+    public ResponseEntity<?> update(
+            @Valid @RequestBody UserRequest request,
             BindingResult bindingResult,
-            @RequestHeader("Authorization") String authorizationHeader) {
+            Authentication authentication) {
         try {
-            checkBodyPayloadErrors(bindingResult);
+            if (bindingResult.hasErrors()) {
+                GlobalExceptionHandler.handlePayloadError("Bad request", bindingResult, HttpStatus.BAD_REQUEST);
+            }
 
-            Long userId = verifyUserValidityFromToken(authorizationHeader);
+            Long userId = (Long) authentication.getPrincipal();
 
-            Users user = getVerifiedUserById(userId);
+            Users user = userService.getUserById(userId)
+                    .orElseThrow(() -> new ApiException(
+                            "User not found",
+                            List.of("User with ID " + userId + " not found"),
+                            HttpStatus.NOT_FOUND,
+                            LocalDateTime.now()));
 
             Optional<Users> userFromRequestUsername = userService.getUserByUsername(request.username());
+            if (userFromRequestUsername.isPresent()
+                    && !userFromRequestUsername.get().getId().equals(user.getId())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new MessageResponse("The new username is already taken !"));
+            }
 
-            Boolean usernameIsAlreadyTaken = userFromRequestUsername.isPresent()
-                    && userFromRequestUsername.get().getUsername() != user.getUsername();
-            if (usernameIsAlreadyTaken) {
-                MessageResponse response = new MessageResponse(
-                        "The new username is already taken !");
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+            Optional<Users> userFromRequestEmail = userService.getUserByEmail(request.email());
+            if (userFromRequestEmail.isPresent()
+                    && !userFromRequestEmail.get().getId().equals(user.getId())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new MessageResponse("The new email is already taken !"));
             }
 
             user.setUsername(request.username());
-
-            Optional<Users> userFromRequestEmail = userService.getUserByEmail(request.email());
-
-            Boolean emailIsAlreadyTaken = userFromRequestEmail.isPresent()
-                    && userFromRequestEmail.get().getEmail() != user.getEmail();
-            if (emailIsAlreadyTaken) {
-                MessageResponse response = new MessageResponse(
-                        "The new email is already taken !");
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
-            }
-
             user.setEmail(request.email());
-
             userService.saveUser(user);
 
-            MessageResponse response = new MessageResponse("Successfully changed the user credentials!");
-            return ResponseEntity.status(HttpStatus.OK).body(response);
+            return ResponseEntity.ok(new MessageResponse("Successfully changed the user credentials!"));
+
         } catch (ApiException e) {
             return GlobalExceptionHandler.handleApiException(e);
         }
     }
 
-    /**
-     * Checks if there are any payload errors in the request body.
-     *
-     * @param bindingResult The BindingResult object that holds the validation
-     *                      errors.
-     */
+
     private void checkBodyPayloadErrors(BindingResult bindingResult) {
-        Boolean payloadIsInvalid = bindingResult.hasErrors();
-        if (payloadIsInvalid) {
+        if (bindingResult.hasErrors()) {
             GlobalExceptionHandler.handlePayloadError("Bad request", bindingResult, HttpStatus.BAD_REQUEST);
         }
     }
 
-    /**
-     * Retrieves a user by their ID and verifies their existence.
-     *
-     * @param userId The ID of the user to retrieve.
-     * @return The user with the given ID.
-     * @throws ApiException if the user with the given ID does not exist.
-     */
-    private Long verifyUserValidityFromToken(String authorizationHeader) {
+    private Long extractUserIdFromJwt(String authorizationHeader) {
         String jwtToken = JwtUtil.extractJwtFromHeader(authorizationHeader);
-
-        // Extract user ID from JWT
-        Optional<Long> optionalUserIdFromToken = JwtUtil.extractUserId(jwtToken);
-
-        Boolean hasJwtExtractionError = optionalUserIdFromToken.isEmpty();
-        if (hasJwtExtractionError) {
-            GlobalExceptionHandler.handleLogicError("Unauthorized", HttpStatus.UNAUTHORIZED);
-        }
-
-        Long userId = optionalUserIdFromToken.get();
-
-        getVerifiedUserById(userId);
-
-        return userId;
+        return jwtUtil.extractUserId(jwtToken)
+                .orElseThrow(() -> new ApiException(
+                        "Unauthorized",
+                        List.of("Invalid or expired JWT"),
+                        HttpStatus.UNAUTHORIZED,
+                        LocalDateTime.now()));
     }
 
-    /**
-     * Retrieves a user by their ID and verifies their existence.
-     *
-     * @param userId The ID of the user to retrieve.
-     * @return The user with the given ID.
-     * @throws ApiException if the user with the given ID does not exist.
-     */
     private Users getVerifiedUserById(Long userId) {
-        Optional<Users> optionalSpecificUser = userService.getUserById(userId);
-
-        Boolean userWithIdDoesNotExist = optionalSpecificUser.isEmpty();
-        if (userWithIdDoesNotExist) {
-            GlobalExceptionHandler.handleLogicError("Not found",
-                    HttpStatus.NOT_FOUND);
-        }
-
-        return optionalSpecificUser.get();
+        return userService.getUserById(userId)
+                .orElseThrow(() -> new ApiException(
+                        "User not found",
+                        List.of("User with ID " + userId + " not found"),
+                        HttpStatus.NOT_FOUND,
+                        LocalDateTime.now()));
     }
+
+
 }

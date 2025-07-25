@@ -6,11 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.openclassrooms.p6.exception.ApiException;
 import com.openclassrooms.p6.exception.GlobalExceptionHandler;
@@ -26,57 +22,39 @@ import com.openclassrooms.p6.utils.JwtUtil;
 import jakarta.validation.Valid;
 
 /**
- * This is the AuthController class that handles user authentication and
- * registration.
- * It is responsible for registering a new user, logging in an existing user,
- * and performing various checks.
- * The class is annotated with {@code @RestController} and
- * {@code @RequestMapping} to define the
- * API endpoints.
- * It also uses various dependencies such as UserService, UserMapper, and
- * JwtUtil.
+ * Controller for authentication: register and login.
  */
 @CrossOrigin("*")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-    /**
-     * UserService to manage user-related operations.
-     */
+
     @Autowired
     private UserService userService;
 
-    /**
-     * UserMapper for converting between entity and DTO types.
-     */
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
     /**
-     * Registers a new user.
-     *
-     * @param request The registration request containing user details.
-     * @return ResponseEntity<AuthResponse> A JWT if registration is successful.
+     * Registers a new user and returns a JWT.
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request,
-            BindingResult bindingResult) {
+                                      BindingResult bindingResult) {
         try {
             checkBodyPayloadErrors(bindingResult);
-
             checkIfUsernameIsInUse(request.username());
-
             checkIfEmailIsInUse(request.email());
 
             Users user = userService.saveUserBySignUp(request);
-
             UserInfoResponse userDto = userMapper.toDtoUser(user);
 
-            String jwtToken = JwtUtil.generateJwtToken(userDto.id());
+            String jwtToken = jwtUtil.generateJwtToken(userDto.id());
 
-            AuthResponse authResponse = new AuthResponse(jwtToken, userDto.id(), userDto.username(),
-                    userDto.email());
-
+            AuthResponse authResponse = new AuthResponse(jwtToken, userDto.id(), userDto.username(), userDto.email());
             return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
 
         } catch (ApiException e) {
@@ -85,99 +63,61 @@ public class AuthController {
     }
 
     /**
-     * Logs in an existing user.
-     *
-     * @param request The login request containing user credentials.
-     * @return ResponseEntity<AuthResponse> A JWT if login is successful.
+     * Logs in an existing user and returns a JWT.
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, BindingResult bindingResult) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request,
+                                   BindingResult bindingResult) {
         try {
             checkBodyPayloadErrors(bindingResult);
 
             Users user = getUserFromIdentifier(request.identifier());
-
             checkUserPassword(request.password(), user);
 
-            UserInfoResponse userEntity = userMapper.toDtoUser(user);
+            UserInfoResponse userDto = userMapper.toDtoUser(user);
+            String jwtToken = jwtUtil.generateJwtToken(userDto.id());
 
-            String jwtToken = JwtUtil.generateJwtToken(userEntity.id());
-
-            AuthResponse authResponse = new AuthResponse(jwtToken, userEntity.id(), userEntity.username(),
-                    userEntity.email());
-
+            AuthResponse authResponse = new AuthResponse(jwtToken, userDto.id(), userDto.username(), userDto.email());
             return ResponseEntity.status(HttpStatus.OK).body(authResponse);
-        } catch (ApiException ex) {
-            return GlobalExceptionHandler.handleApiException(ex);
+
+        } catch (ApiException e) {
+            return GlobalExceptionHandler.handleApiException(e);
         }
     }
 
-    /**
-     * Checks if there are any payload errors in the request body.
-     *
-     * @param bindingResult The BindingResult object that holds the validation
-     *                      errors.
-     */
+
     private void checkBodyPayloadErrors(BindingResult bindingResult) {
-        Boolean payloadIsInvalid = bindingResult.hasErrors();
-        if (payloadIsInvalid) {
+        if (bindingResult.hasErrors()) {
             GlobalExceptionHandler.handlePayloadError("Bad request", bindingResult, HttpStatus.BAD_REQUEST);
         }
     }
 
-    /**
-     * Checks if an username is already registered in the system.
-     *
-     * @param username The username to check if it is already registered.
-     */
     private void checkIfUsernameIsInUse(String username) {
-        Boolean hasAlreadyRegistered = userService.isUsernameInUse(username);
-        if (hasAlreadyRegistered) {
+        if (userService.isUsernameInUse(username)) {
             GlobalExceptionHandler.handleLogicError("Username is already in use", HttpStatus.CONFLICT);
         }
     }
 
-    /**
-     * Checks if an email is already registered in the system.
-     *
-     * @param email The email to check if it is already registered.
-     */
     private void checkIfEmailIsInUse(String email) {
-        Boolean hasAlreadyRegistered = userService.isEmailInUse(email);
-        if (hasAlreadyRegistered) {
+        if (userService.isEmailInUse(email)) {
             GlobalExceptionHandler.handleLogicError("Email is already in use", HttpStatus.CONFLICT);
         }
     }
 
-    /**
-     * Checks if the provided password is correct for the given user.
-     *
-     * @param requestPassword The password to check.
-     * @param user            The user to check the password against.
-     */
     private void checkUserPassword(String requestPassword, Users user) {
-        Boolean passwordIsIncorrect = !userService.isPasswordValid(requestPassword, user);
-        if (passwordIsIncorrect) {
+        if (!userService.isPasswordValid(requestPassword, user)) {
             GlobalExceptionHandler.handleLogicError("Password is incorrect", HttpStatus.UNAUTHORIZED);
         }
     }
 
-    /**
-     * Checks if the provided username or email in the login request is valid and
-     * returns the user
-     *
-     * @param usernameOrEmail The username or email to check.
-     * @throws ApiException If the username or email is invalid.
-     */
-    private Users getUserFromIdentifier(String usernameOrEmail) {
-        Optional<Users> userFromEmail = userService.getUserByEmail(usernameOrEmail);
-        Optional<Users> userFromUsername = userService.getUserByUsername(usernameOrEmail);
+    private Users getUserFromIdentifier(String identifier) {
+        Optional<Users> userFromEmail = userService.getUserByEmail(identifier);
+        Optional<Users> userFromUsername = userService.getUserByUsername(identifier);
 
-        Boolean identifierIsInvalid = userFromEmail.isEmpty() && userFromUsername.isEmpty();
-        if (identifierIsInvalid) {
+        if (userFromEmail.isEmpty() && userFromUsername.isEmpty()) {
             GlobalExceptionHandler.handleLogicError("Invalid username/email", HttpStatus.UNAUTHORIZED);
         }
 
-        return userFromEmail.isPresent() ? userFromEmail.get() : userFromUsername.get();
+        return userFromEmail.orElseGet(userFromUsername::get);
     }
 }
