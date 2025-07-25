@@ -37,6 +37,8 @@ public class ArticleService {
         article.setThemeId(themeId);
         article.setTitle(articleCreationRequest.title());
         article.setDescription(articleCreationRequest.description());
+        article.setContent(articleCreationRequest.content());
+
 
         return articleRepository.save(article);
     }

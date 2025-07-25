@@ -8,10 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.openclassrooms.p6.exception.ApiException;
 import com.openclassrooms.p6.exception.GlobalExceptionHandler;
@@ -35,11 +32,6 @@ import com.openclassrooms.p6.service.UserService;
 import com.openclassrooms.p6.utils.JwtUtil;
 
 import jakarta.validation.Valid;
-
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.PostMapping;
 
 /**
  * This is the ArticlesController class. It is a REST controller that handles
@@ -132,35 +124,29 @@ public class ArticlesController {
      * @throws ApiException if there is an error in the API.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getArticlesById(@RequestParam final Long articleId,
-            @Valid @RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<?> getArticlesById(@PathVariable("id") Long articleId,
+                                             @RequestHeader("Authorization") String authorizationHeader) {
         try {
             verifyUserValidityFromToken(authorizationHeader);
 
-            Articles articleEntity = verifyAndGetArticlesById(articleId);
-            ArticleSummaryResponse articleDto = articleMapper.toDtoArticle(articleEntity);
+            Articles article = verifyAndGetArticlesById(articleId);
+            ArticleSummaryResponse articleDto = articleMapper.toDtoArticle(article);
+            String author = getVerifiedUserById(article.getUserId()).getUsername();
+            String theme = article.getTheme().getTitle();
 
-            String articleAuthor = getVerifiedUserById(articleEntity.getUserId()).getUsername();
+            List<CommentResponse> comments = new ArrayList<>();
+            commentsMapper.toDtoComments(commentsService.getAllCommentsByArticleId(articleId)).forEach(comments::add);
 
-            String theme = articleEntity.getTheme().getTitle();
+            SingleArticleResponse response = new SingleArticleResponse(
+                    articleId, author, articleDto.publicationDate(),
+                    theme, articleDto.title(), articleDto.description(), comments
+            );
 
-            List<Comments> commentsEntityList = commentsService.getAllCommentsByArticleId(articleId);
-            Iterable<CommentResponse> commentsDtoList = commentsMapper.toDtoComments(commentsEntityList);
-
-            List<CommentResponse> normalizedComments = new ArrayList<>();
-
-            normalizedComments.addAll((List<? extends CommentResponse>) commentsDtoList);
-
-            SingleArticleResponse response = new SingleArticleResponse(articleId,
-                    articleAuthor, articleDto.publicationDate(), theme, articleDto.title(), articleDto.description(),
-                    normalizedComments);
-
-            return ResponseEntity.status(HttpStatus.OK).body(response);
+            return ResponseEntity.ok(response);
         } catch (ApiException e) {
             return GlobalExceptionHandler.handleApiException(e);
         }
     }
-
     /**
      * Posts an article.
      *

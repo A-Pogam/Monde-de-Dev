@@ -57,4 +57,8 @@ public class Articles {
     @Column(name = "updatedat", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", nullable = false)
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+    private String content;
+
 }
