@@ -42,16 +42,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 System.out.println("User ID extrait du token : " + userIdOpt);
 
                 if (userIdOpt.isPresent()) {
+                    Long userId = userIdOpt.get();
+
                     List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
-
                     UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(userIdOpt.get(), null, authorities);
-
+                            new UsernamePasswordAuthenticationToken(userId, null, authorities);
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    System.out.println("Authentication enregistrée dans le contexte : " + SecurityContextHolder.getContext().getAuthentication());
-
                 }
             }
         }

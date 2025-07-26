@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
 
+import com.openclassrooms.p6.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,6 @@ import com.openclassrooms.p6.service.ThemeService;
 import com.openclassrooms.p6.service.UserService;
 import com.openclassrooms.p6.utils.JwtUtil;
 
-@CrossOrigin("*")
 @RestController
 @RequestMapping("/api/themes")
 public class ThemesController {
@@ -46,12 +46,16 @@ public class ThemesController {
     private UserService userService;
 
     @Autowired
-    private JwtUtil jwtUtil; // ✅ Utilisation de JwtUtil injecté
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private AuthService authService;
+
 
     @GetMapping("")
     public ResponseEntity<?> getAllThemes(@RequestHeader("Authorization") String authorizationHeader) {
         try {
-            verifyUserValidityFromToken(authorizationHeader);
+            Long userId = authService.verifyUserValidityFromToken(authorizationHeader);
 
             List<Themes> themesEntityList = themeService.getThemes();
             Iterable<SingleThemeResponse> themesDto = themeMapper.toDtoThemes(themesEntityList);
@@ -65,7 +69,7 @@ public class ThemesController {
     @GetMapping("/subscribed")
     public ResponseEntity<?> getSubscribedThemes(@RequestHeader("Authorization") String authorizationHeader) {
         try {
-            Long userId = verifyUserValidityFromToken(authorizationHeader);
+            Long userId = authService.verifyUserValidityFromToken(authorizationHeader);
 
             Iterable<Subscriptions> subscriptions = subscriptionsService.findAllUserSubscriptions(userId);
             Iterable<SingleThemeSubscriptionResponse> subscriptionsDto = subscriptionsMapper.toDtoSubscriptions(subscriptions);
@@ -81,7 +85,7 @@ public class ThemesController {
             @RequestParam final Long themeId,
             @RequestHeader("Authorization") String authorizationHeader) {
         try {
-            Long userId = verifyUserValidityFromToken(authorizationHeader);
+            Long userId = authService.verifyUserValidityFromToken(authorizationHeader);
             verifyAndGetThemeById(themeId);
 
             Subscriptions subscription = getUserThemeSubscription(userId, themeId);
@@ -110,7 +114,7 @@ public class ThemesController {
             @RequestParam final Long themeId,
             @RequestHeader("Authorization") String authorizationHeader) {
         try {
-            Long userId = verifyUserValidityFromToken(authorizationHeader);
+            Long userId = authService.verifyUserValidityFromToken(authorizationHeader);
             verifyAndGetThemeById(themeId);
 
             Subscriptions subscription = getUserThemeSubscription(userId, themeId);
@@ -134,19 +138,6 @@ public class ThemesController {
     }
 
     // ----------------------- PRIVATE METHODS ----------------------------
-
-    private Long verifyUserValidityFromToken(String authorizationHeader) {
-        String jwtToken = jwtUtil.extractJwtFromHeader(authorizationHeader);
-        Optional<Long> optionalUserId = jwtUtil.extractUserId(jwtToken);
-
-        if (optionalUserId.isEmpty()) {
-            GlobalExceptionHandler.handleLogicError("Unauthorized", HttpStatus.UNAUTHORIZED);
-        }
-
-        Long userId = optionalUserId.get();
-        getVerifiedUserById(userId);
-        return userId;
-    }
 
     private Users getVerifiedUserById(Long userId) {
         return userService.getUserById(userId)
