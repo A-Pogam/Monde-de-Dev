@@ -24,7 +24,6 @@ import jakarta.validation.Valid;
 /**
  * Controller for authentication: register and login.
  */
-@CrossOrigin("*")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {

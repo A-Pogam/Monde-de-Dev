@@ -23,7 +23,6 @@ import com.openclassrooms.p6.utils.JwtUtil;
 
 import jakarta.validation.Valid;
 
-@CrossOrigin("*")
 @RestController
 @RequestMapping("/api/users")
 public class UsersController {
@@ -41,7 +40,7 @@ public class UsersController {
     @GetMapping("")
     public ResponseEntity<?> getUserInfo(Authentication authentication) {
         try {
-            Long userId = (Long) authentication.getPrincipal();
+            Long userId = Long.parseLong((String) authentication.getPrincipal());
             Users user = getVerifiedUserById(userId);
             UserInfoResponse response = userMapper.toDtoUser(user);
             return ResponseEntity.ok(response);
@@ -60,7 +59,7 @@ public class UsersController {
                 GlobalExceptionHandler.handlePayloadError("Bad request", bindingResult, HttpStatus.BAD_REQUEST);
             }
 
-            Long userId = (Long) authentication.getPrincipal();
+            Long userId = Long.parseLong((String) authentication.getPrincipal());
 
             Users user = userService.getUserById(userId)
                     .orElseThrow(() -> new ApiException(

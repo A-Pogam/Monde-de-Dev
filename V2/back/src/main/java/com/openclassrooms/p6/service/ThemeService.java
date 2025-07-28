@@ -42,4 +42,9 @@ public class ThemeService {
     public Optional<Themes> getThemeById(final Long themeId) {
         return themeRepository.findById(themeId);
     }
+
+    public Themes createTheme(final Themes theme) {
+        return themeRepository.save(theme);
+    }
 }
+

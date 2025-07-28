@@ -10,6 +10,14 @@ export type ArticleSummary = {
   publicationDate: string;
 };
 
+export type ArticleCreationRequest = {
+  title: string;
+  description: string;
+  content: string;
+};
+
+
+
 /**
  * Represents a user comment on an article.
  */

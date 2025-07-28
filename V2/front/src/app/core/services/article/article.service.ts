@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from '../api/api.service';
 import { BehaviorSubject, Observable, catchError, tap } from 'rxjs';
-import { Article, ArticleSummary, UserComment } from '@core/types/article.type';
+import { Article, ArticleSummary, UserComment, ArticleCreationRequest } from '@core/types/article.type';
 import { Message } from '@core/types/message.type';
+
 
 /**
  * Service for managing articles, including fetching, creating, and commenting.
@@ -16,7 +17,7 @@ export class ArticleService extends ApiService {
   /**
    * The base pathname for articles-related API endpoints.
    */
-  private readonly API_PATHNAME: string = 'api/articles';
+  private readonly API_PATHNAME: string = '/api/articles';
 
   /**
    * Observable to track the loading state of article-related operations.
@@ -63,20 +64,21 @@ export class ArticleService extends ApiService {
    * @param {Pick<Article, 'title' | 'description'>} newArticle - The new article data.
    * @returns {Observable<Message>} An Observable with the response data.
    */
-  public postArticle = (
-    themeId: number,
-    newArticle: Pick<Article, 'title' | 'description'>
-  ): Observable<Message> => {
-    this.isLoading$.next(true);
+ public postArticle = (
+  themeId: number,
+  newArticle: ArticleCreationRequest
+): Observable<Message> => {
+  this.isLoading$.next(true);
 
-    const params = this.changeObjectParamsToArray({ themeId });
+  const params = this.changeObjectParamsToArray({ themeId });
 
-    return this.fetchPost<Pick<Article, 'title' | 'description'>>(
-      `${this.API_PATHNAME}/`,
-      newArticle,
-      params
-    ).pipe(tap(this.updateLoadingState), catchError(this.handleErrors));
-  };
+  return this.fetchPost<ArticleCreationRequest>(
+    `${this.API_PATHNAME}`,
+    newArticle,
+    params
+  ).pipe(tap(this.updateLoadingState), catchError(this.handleErrors));
+};
+
 
   /**
    * Fetches an article by its ID.

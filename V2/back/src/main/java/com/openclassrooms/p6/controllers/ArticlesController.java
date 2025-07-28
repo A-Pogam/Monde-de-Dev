@@ -45,7 +45,7 @@ public class ArticlesController {
     @GetMapping("")
     public ResponseEntity<?> getAllArticles(Authentication authentication) {
         try {
-            Long userId = (Long) authentication.getPrincipal();
+            Long userId = Long.parseLong((String) authentication.getPrincipal());
             List<Articles> articlesEntity = articleService.getArticles();
             List<ArticleSummaryResponse> articlesDto = new ArrayList<>();
             articleMapper.toDtoArticles(articlesEntity).forEach(articlesDto::add);
@@ -59,7 +59,7 @@ public class ArticlesController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getArticleById(@PathVariable("id") Long articleId, Authentication authentication) {
         try {
-            Long userId = (Long) authentication.getPrincipal();
+            Long userId = Long.parseLong((String) authentication.getPrincipal());
             Articles article = verifyAndGetArticleById(articleId);
             ArticleSummaryResponse articleDto = articleMapper.toDtoArticle(article);
             String author = getVerifiedUserById(article.getUserId()).getUsername();
@@ -85,16 +85,33 @@ public class ArticlesController {
             BindingResult bindingResult,
             Authentication authentication) {
         try {
-            Long userId = (Long) authentication.getPrincipal();
+            System.out.println("AUTHENTICATION: " + authentication);
+            System.out.println("PRINCIPAL: " + authentication.getPrincipal());
+            System.out.println("AUTHORITIES: " + authentication.getAuthorities());
+
+            Long userId = Long.parseLong((String) authentication.getPrincipal());
             checkBodyPayloadErrors(bindingResult);
-            verifyAndGetThemeById(themeId);
-            articleService.createArticle(request, userId, themeId);
+            Themes theme = verifyOrCreateThemeById(themeId);
+            articleService.createArticle(request, userId, theme.getId());
+
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new MessageResponse("Article has been successfully published !"));
         } catch (ApiException e) {
             return GlobalExceptionHandler.handleApiException(e);
         }
     }
+
+    private Themes verifyOrCreateThemeById(Long themeId) {
+        return themeService.getThemeById(themeId)
+                .orElseGet(() -> {
+                    // Créer un thème générique si l'ID est inconnu
+                    Themes newTheme = new Themes();
+                    newTheme.setTitle("Thème inconnu " + themeId); // ou mieux, envoyer le nom du thème dans le body
+                    return themeService.createTheme(newTheme); // méthode à implémenter
+                });
+    }
+
+
 
     @PostMapping("/comment/")
     public ResponseEntity<?> postCommentToArticle(
@@ -103,7 +120,7 @@ public class ArticlesController {
             BindingResult bindingResult,
             Authentication authentication) {
         try {
-            Long userId = (Long) authentication.getPrincipal();
+            Long userId = Long.parseLong((String) authentication.getPrincipal());
             checkBodyPayloadErrors(bindingResult);
             verifyAndGetArticleById(articleId);
             commentsService.createComment(request, userId, articleId);
@@ -112,6 +129,7 @@ public class ArticlesController {
         } catch (ApiException e) {
             return GlobalExceptionHandler.handleApiException(e);
         }
+
     }
 
     // === PRIVATE HELPERS ===
