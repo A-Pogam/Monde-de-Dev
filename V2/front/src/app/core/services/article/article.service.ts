@@ -86,15 +86,16 @@ export class ArticleService extends ApiService {
    * @returns {Observable<Article>} An Observable with the response data.
    */
   public getArticleById = (articleId: number): Observable<Article> => {
-    this.isLoading$.next(true);
+  this.isLoading$.next(true);
 
-    const params = this.changeObjectParamsToArray({ articleId });
+  return this.fetchGet<Article>(
+    `${this.API_PATHNAME}/${articleId}`
+  ).pipe(
+    tap(this.updateLoadingState),
+    catchError(this.handleErrors)
+  );
+};
 
-    return this.fetchGet<ArticleSummary>(`${this.API_PATHNAME}/`, params).pipe(
-      tap(this.updateLoadingState),
-      catchError(this.handleErrors)
-    );
-  };
 
   /**
    * Creates a new comment for an article.
