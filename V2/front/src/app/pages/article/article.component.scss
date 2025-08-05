@@ -13,6 +13,10 @@
   --_article-element-padding: 25px;
   padding: var(--_article-element-padding);
 
+   @media screen and (min-width: 1024px) {
+    margin-left: 15rem; 
+  }
+
   &__error {
     @include error-paragraph-style;
 
