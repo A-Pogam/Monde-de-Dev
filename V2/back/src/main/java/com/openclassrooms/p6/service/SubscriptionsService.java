@@ -1,6 +1,7 @@
 package com.openclassrooms.p6.service;
 
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -77,4 +78,10 @@ public class SubscriptionsService {
     public Iterable<Subscriptions> findAllUserSubscriptions(Long userId) {
         return subscriptionRepository.findAllByUserId(userId);
     }
+    public boolean isUserSubscribedToTheme(Long userId, Long themeId) {
+        Iterable<Subscriptions> subscriptions = findAllUserSubscriptions(userId);
+        return StreamSupport.stream(subscriptions.spliterator(), false)
+                .anyMatch(s -> s.getThemeId().equals(themeId) && Boolean.TRUE.equals(s.getIsSubscribed()));
+    }
+
 }
