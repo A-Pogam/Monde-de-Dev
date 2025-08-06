@@ -3,15 +3,7 @@ package com.openclassrooms.p6.controllers;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-
-import com.openclassrooms.p6.service.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.*;
+import java.util.stream.StreamSupport;
 
 import com.openclassrooms.p6.exception.ApiException;
 import com.openclassrooms.p6.exception.GlobalExceptionHandler;
@@ -23,13 +15,18 @@ import com.openclassrooms.p6.model.Themes;
 import com.openclassrooms.p6.model.Users;
 import com.openclassrooms.p6.payload.request.ArticleRequest;
 import com.openclassrooms.p6.payload.request.CommentRequest;
-import com.openclassrooms.p6.payload.response.ArticleSummaryResponse;
-import com.openclassrooms.p6.payload.response.CommentResponse;
-import com.openclassrooms.p6.payload.response.MessageResponse;
-import com.openclassrooms.p6.payload.response.MultipleArticlesResponse;
-import com.openclassrooms.p6.payload.response.SingleArticleResponse;
+import com.openclassrooms.p6.payload.response.*;
+
+import com.openclassrooms.p6.service.*;
 
 import jakarta.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/articles")
@@ -39,6 +36,7 @@ public class ArticlesController {
     @Autowired private ArticleService articleService;
     @Autowired private CommentsService commentsService;
     @Autowired private ThemeService themeService;
+    @Autowired private SubscriptionsService subscriptionsService;
     @Autowired private ArticleMapper articleMapper;
     @Autowired private CommentMapper commentsMapper;
 
@@ -46,11 +44,25 @@ public class ArticlesController {
     public ResponseEntity<?> getAllArticles(Authentication authentication) {
         try {
             Long userId = Long.parseLong((String) authentication.getPrincipal());
-            List<Articles> articlesEntity = articleService.getArticles();
+
+            List<Articles> allArticles = articleService.getArticles();
+
+            // Filtrer selon les abonnements
+            List<Long> subscribedThemeIds = StreamSupport.stream(
+                            subscriptionsService.findAllUserSubscriptions(userId).spliterator(), false)
+                    .filter(s -> Boolean.TRUE.equals(s.getIsSubscribed()))
+                    .map(s -> s.getThemeId())
+                    .toList();
+
+            List<Articles> visibleArticles = allArticles.stream()
+                    .filter(article -> subscribedThemeIds.contains(article.getThemeId()))
+                    .toList();
+
             List<ArticleSummaryResponse> articlesDto = new ArrayList<>();
-            articleMapper.toDtoArticles(articlesEntity).forEach(articlesDto::add);
-            MultipleArticlesResponse response = new MultipleArticlesResponse(articlesDto);
-            return ResponseEntity.ok(response);
+            articleMapper.toDtoArticles(visibleArticles).forEach(articlesDto::add);
+
+            return ResponseEntity.ok(new MultipleArticlesResponse(articlesDto));
+
         } catch (ApiException e) {
             return GlobalExceptionHandler.handleApiException(e);
         }
@@ -60,7 +72,20 @@ public class ArticlesController {
     public ResponseEntity<?> getArticleById(@PathVariable("id") Long articleId, Authentication authentication) {
         try {
             Long userId = Long.parseLong((String) authentication.getPrincipal());
+
             Articles article = verifyAndGetArticleById(articleId);
+
+            // Vérifier si l'utilisateur est abonné au thème de l'article
+            boolean isSubscribed = subscriptionsService.isUserSubscribedToTheme(userId, article.getThemeId());
+            if (!isSubscribed) {
+                throw new ApiException(
+                        "Access denied",
+                        List.of("You must be subscribed to this theme to view the article."),
+                        HttpStatus.FORBIDDEN,
+                        LocalDateTime.now()
+                );
+            }
+
             ArticleSummaryResponse articleDto = articleMapper.toDtoArticle(article);
             String author = getVerifiedUserById(article.getUserId()).getUsername();
             String theme = article.getTheme().getTitle();
@@ -68,11 +93,10 @@ public class ArticlesController {
             List<CommentResponse> comments = new ArrayList<>();
             commentsMapper.toDtoComments(commentsService.getAllCommentsByArticleId(articleId)).forEach(comments::add);
 
-            SingleArticleResponse response = new SingleArticleResponse(
+            return ResponseEntity.ok(new SingleArticleResponse(
                     articleId, author, articleDto.publicationDate(),
                     theme, articleDto.title(), articleDto.description(), comments
-            );
-            return ResponseEntity.ok(response);
+            ));
         } catch (ApiException e) {
             return GlobalExceptionHandler.handleApiException(e);
         }
@@ -85,12 +109,9 @@ public class ArticlesController {
             BindingResult bindingResult,
             Authentication authentication) {
         try {
-            System.out.println("AUTHENTICATION: " + authentication);
-            System.out.println("PRINCIPAL: " + authentication.getPrincipal());
-            System.out.println("AUTHORITIES: " + authentication.getAuthorities());
-
             Long userId = Long.parseLong((String) authentication.getPrincipal());
             checkBodyPayloadErrors(bindingResult);
+
             Themes theme = verifyOrCreateThemeById(themeId);
             articleService.createArticle(request, userId, theme.getId());
 
@@ -101,18 +122,6 @@ public class ArticlesController {
         }
     }
 
-    private Themes verifyOrCreateThemeById(Long themeId) {
-        return themeService.getThemeById(themeId)
-                .orElseGet(() -> {
-                    // Créer un thème générique si l'ID est inconnu
-                    Themes newTheme = new Themes();
-                    newTheme.setTitle("Thème inconnu " + themeId); // ou mieux, envoyer le nom du thème dans le body
-                    return themeService.createTheme(newTheme); // méthode à implémenter
-                });
-    }
-
-
-
     @PostMapping("/comment/")
     public ResponseEntity<?> postCommentToArticle(
             @RequestParam Long articleId,
@@ -122,14 +131,26 @@ public class ArticlesController {
         try {
             Long userId = Long.parseLong((String) authentication.getPrincipal());
             checkBodyPayloadErrors(bindingResult);
-            verifyAndGetArticleById(articleId);
+
+            Articles article = verifyAndGetArticleById(articleId);
+
+            // Vérification de l’abonnement
+            boolean isSubscribed = subscriptionsService.isUserSubscribedToTheme(userId, article.getThemeId());
+            if (!isSubscribed) {
+                throw new ApiException(
+                        "Access denied",
+                        List.of("You must be subscribed to this theme to comment on this article."),
+                        HttpStatus.FORBIDDEN,
+                        LocalDateTime.now()
+                );
+            }
+
             commentsService.createComment(request, userId, articleId);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new MessageResponse("Comment has been successfully published !"));
         } catch (ApiException e) {
             return GlobalExceptionHandler.handleApiException(e);
         }
-
     }
 
     // === PRIVATE HELPERS ===
@@ -137,36 +158,32 @@ public class ArticlesController {
     private Users getVerifiedUserById(Long userId) {
         return userService.getUserById(userId).orElseThrow(() ->
                 new ApiException(
-                        "Theme not found",
-                        List.of("No theme with ID: " + userId),
+                        "User not found",
+                        List.of("No user with ID: " + userId),
                         HttpStatus.NOT_FOUND,
                         LocalDateTime.now()
                 )
         );
     }
-
-
 
     private Articles verifyAndGetArticleById(Long articleId) {
         return articleService.getArticleById(articleId).orElseThrow(() ->
                 new ApiException(
-                        "Theme not found",
-                        List.of("No theme with ID: " + articleId),
+                        "Article not found",
+                        List.of("No article with ID: " + articleId),
                         HttpStatus.NOT_FOUND,
                         LocalDateTime.now()
                 )
         );
     }
 
-    private Themes verifyAndGetThemeById(Long themeId) {
-        return themeService.getThemeById(themeId).orElseThrow(() ->
-                new ApiException(
-                        "Theme not found",
-                        List.of("No theme with ID: " + themeId),
-                        HttpStatus.NOT_FOUND,
-                        LocalDateTime.now()
-                )
-        );
+    private Themes verifyOrCreateThemeById(Long themeId) {
+        return themeService.getThemeById(themeId)
+                .orElseGet(() -> {
+                    Themes newTheme = new Themes();
+                    newTheme.setTitle("Thème inconnu " + themeId);
+                    return themeService.createTheme(newTheme);
+                });
     }
 
     private void checkBodyPayloadErrors(BindingResult bindingResult) {
