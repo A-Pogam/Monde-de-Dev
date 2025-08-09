@@ -50,16 +50,20 @@ export class UserService extends ApiService {
    * @param {Omit<UserBasicInfo, 'id'>} updatedUser - The updated user information.
    * @returns An Observable containing a message indicating the update status.
    */
-  public updateUser = (
-    updatedUser: Omit<UserBasicInfo, 'id'>
-  ): Observable<Message> => {
-    this.isLoading$.next(true);
+ public updateUser = (
+  updatedUser: Omit<UserBasicInfo, 'id'>
+): Observable<Message> => {
+  this.isLoading$.next(true);
 
-    return this.fetchPut<Message>(this.API_PATHNAME, updatedUser).pipe(
-      tap(this.updateLoadingState),
-      catchError(this.handleErrors)
-    );
-  };
+  return this.fetchPut<Message>(this.API_PATHNAME, updatedUser).pipe(
+    tap((response) => {
+      console.log('Response from server:', response); // Affiche la réponse pour vérifier
+      this.updateLoadingState(response);
+    }),
+    catchError(this.handleErrors)
+  );
+};
+
 
   /**
    * Updates the loading state.

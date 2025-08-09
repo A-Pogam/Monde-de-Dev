@@ -149,4 +149,8 @@ public class UserService {
         return saveUser(user);
     }
 
+    public String encodePassword(String password) {
+        return passwordEncoder.encode(password);
+    }
+
 }

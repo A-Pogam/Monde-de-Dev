@@ -22,4 +22,6 @@ export type UserInfo = {
 /**
  * Represents basic user information.
  */
-export type UserBasicInfo = Omit<UserInfo, 'token'>;
+export type UserBasicInfo = Omit<UserInfo, 'token'> & {
+  password?: string;  
+};

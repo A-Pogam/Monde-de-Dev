@@ -60,7 +60,6 @@ public class UsersController {
             }
 
             Long userId = Long.parseLong((String) authentication.getPrincipal());
-
             Users user = userService.getUserById(userId)
                     .orElseThrow(() -> new ApiException(
                             "User not found",
@@ -68,22 +67,26 @@ public class UsersController {
                             HttpStatus.NOT_FOUND,
                             LocalDateTime.now()));
 
-            Optional<Users> userFromRequestUsername = userService.getUserByUsername(request.username());
-            if (userFromRequestUsername.isPresent()
-                    && !userFromRequestUsername.get().getId().equals(user.getId())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(new MessageResponse("The new username is already taken !"));
+            if (request.email() != null && !request.email().isEmpty()) {
+                Optional<Users> userFromRequestEmail = userService.getUserByEmail(request.email());
+                if (userFromRequestEmail.isPresent()
+                        && !userFromRequestEmail.get().getId().equals(user.getId())) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT)
+                            .body(new MessageResponse("The new email is already taken!"));
+                }
+
+                user.setEmail(request.email());
             }
 
-            Optional<Users> userFromRequestEmail = userService.getUserByEmail(request.email());
-            if (userFromRequestEmail.isPresent()
-                    && !userFromRequestEmail.get().getId().equals(user.getId())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(new MessageResponse("The new email is already taken !"));
+            if (request.username() != null && !request.username().isEmpty()) {
+                user.setUsername(request.username());
             }
 
-            user.setUsername(request.username());
-            user.setEmail(request.email());
+            if (request.password() != null && !request.password().isEmpty()) {
+                String encodedPassword = userService.encodePassword(request.password());
+                user.setPassword(encodedPassword);
+            }
+
             userService.saveUser(user);
 
             return ResponseEntity.ok(new MessageResponse("Successfully changed the user credentials!"));
@@ -92,6 +95,8 @@ public class UsersController {
             return GlobalExceptionHandler.handleApiException(e);
         }
     }
+
+
 
 
     private void checkBodyPayloadErrors(BindingResult bindingResult) {

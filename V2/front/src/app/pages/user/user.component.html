@@ -1,5 +1,4 @@
 <section class="user">
-
   <h1 class="user__title">Profil utilisateur</h1>
 
   <form class="user__form" [formGroup]="userCredentialsForm" (ngSubmit)="onSubmit($event)">
@@ -9,23 +8,33 @@
 
       <input type="email" class="user__input" formControlName="email" autocomplete="email"
         value="{{userInfo()?.email}}" />
-    </fieldset>
 
+      <!-- Ajout du champ mot de passe -->
+      <input type="password" class="user__input" formControlName="password" autocomplete="new-password"
+        placeholder="Nouveau mot de passe" />
+
+      <!-- Confirmer le mot de passe -->
+      <input type="password" class="user__input" formControlName="confirmPassword" autocomplete="new-password"
+        placeholder="Confirmer le mot de passe" />
+    </fieldset>
 
     <button type="submit" class="user__submit-button">Sauvegarder</button>
   </form>
 
-  @if(userUpdateIsLoading()){
-  <app-spin-loader></app-spin-loader>
-  <p class="user__loading">En attente</p>
-  } @else {
-  @if(userHasAnError()){
-  <p class="user__error">Une erreur est survenue: <br /> {{userErrorMessage()}}</p>
-  } @else{
-  <p class="user__success">{{userSuccessMessage}}</p>
-  }
-  }
+  <!-- Chargement, erreur et succès -->
+  <div *ngIf="userUpdateIsLoading()">
+    <app-spin-loader></app-spin-loader>
+    <p class="user__loading">En attente...</p>
+  </div>
 
+  <div *ngIf="userHasAnError()">
+    <p class="user__error">Une erreur est survenue: <br /> {{userErrorMessage()}}</p>
+  </div>
+  <div *ngIf="!userHasAnError() && userSuccessMessage">
+    <p class="user__success">{{userSuccessMessage}}</p>
+  </div>
+
+  
 
   <button type="button" class="user__logout-button" (click)="logout()">Se déconnecter</button>
 
@@ -33,7 +42,6 @@
 
   <div class="user__subscriptions-container">
     <h2 class="user__subscriptions-title">Abonnements</h2>
-
     <app-topics-container [onSubscriptionChange]="updateUserThemeSubscription"
       [topicsArray]="topicsArray"></app-topics-container>
   </div>

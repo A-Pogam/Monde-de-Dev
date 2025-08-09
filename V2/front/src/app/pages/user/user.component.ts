@@ -105,10 +105,20 @@ export class UserComponent {
   /**
    * Form group for user credentials, including username and email.
    */
-  public readonly userCredentialsForm = this.formBuilder.group({
-    username: [this.userInfo()?.username, Validators.required],
-    email: [this.userInfo()?.email, [Validators.required]],
-  });
+public readonly userCredentialsForm = this.formBuilder.group({
+  username: [this.userInfo()?.username, Validators.required],
+  email: [this.userInfo()?.email, [Validators.required]],
+  password: ['', [Validators.minLength(6)]],  // Validation mot de passe
+  confirmPassword: ['', [Validators.minLength(6)]],  // Validation confirmation mot de passe
+});
+
+// verifies if passwords match.
+get passwordsMatch() {
+  const password = this.userCredentialsForm.get('password')?.value;
+  const confirmPassword = this.userCredentialsForm.get('confirmPassword')?.value;
+  return password === confirmPassword;
+}
+
 
   ngOnInit() {
     this.initializeTopicsArray();
@@ -140,23 +150,42 @@ export class UserComponent {
    * @param {Event} event - The form submission event.
    */
   onSubmit = (event: Event): void => {
-    event.preventDefault();
+  event.preventDefault();
 
-    this.userSuccessMessage = '';
+  this.userSuccessMessage = '';
 
-    const { username, email } = this.userCredentialsForm.getRawValue();
+  const { username, email, password } = this.userCredentialsForm.getRawValue();
 
-    const subscription: Subscription = this.userService
-      .updateUser({
-        username: username?.trim() as string,
-        email: email?.trim() as string,
-      })
-      .subscribe((result: Message) => {
-        this.userSuccessMessage = result.message;
+  const userUpdateData: any = {};
 
-        subscription.unsubscribe();
-      });
-  };
+  if (username) {
+    userUpdateData.username = username.trim();
+  }
+  if (email) {
+    userUpdateData.email = email.trim();
+  }
+  if (password) {
+    userUpdateData.password = password.trim();
+  }
+
+  console.log('Data to update:', userUpdateData);  
+
+  this.userService.updateUser(userUpdateData).subscribe(
+    (result: Message) => {
+      this.userSuccessMessage = result.message;
+      console.log('Update Success:', this.userSuccessMessage);
+    },
+    (error) => {
+      console.error('Update failed:', error);
+    }
+  );
+};
+
+
+
+
+
+
 
   /**
    * Logs out the user by deleting the JWT token and redirecting to the home page.
