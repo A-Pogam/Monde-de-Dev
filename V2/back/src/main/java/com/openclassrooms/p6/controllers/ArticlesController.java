@@ -104,7 +104,6 @@ public class ArticlesController {
 
     @PostMapping("")
     public ResponseEntity<?> postArticle(
-            @RequestParam Long themeId,
             @Valid @RequestBody ArticleRequest request,
             BindingResult bindingResult,
             Authentication authentication) {
@@ -112,15 +111,16 @@ public class ArticlesController {
             Long userId = Long.parseLong((String) authentication.getPrincipal());
             checkBodyPayloadErrors(bindingResult);
 
-            Themes theme = verifyOrCreateThemeById(themeId);
+            Themes theme = verifyOrCreateThemeByTitle(request.title());
             articleService.createArticle(request, userId, theme.getId());
 
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(new MessageResponse("Article has been successfully published !"));
+                    .body(new MessageResponse("Article has been successfully published!"));
         } catch (ApiException e) {
             return GlobalExceptionHandler.handleApiException(e);
         }
     }
+
 
     @PostMapping("/comment/")
     public ResponseEntity<?> postCommentToArticle(
@@ -177,14 +177,18 @@ public class ArticlesController {
         );
     }
 
-    private Themes verifyOrCreateThemeById(Long themeId) {
-        return themeService.getThemeById(themeId)
+    private Themes verifyOrCreateThemeByTitle(String themeTitle) {
+        return themeService.getThemes().stream()
+                .filter(theme -> theme.getTitle().equalsIgnoreCase(themeTitle))
+                .findFirst()
                 .orElseGet(() -> {
                     Themes newTheme = new Themes();
-                    newTheme.setTitle("Thème inconnu " + themeId);
+                    newTheme.setTitle(themeTitle);
                     return themeService.createTheme(newTheme);
                 });
     }
+
+
 
     private void checkBodyPayloadErrors(BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
