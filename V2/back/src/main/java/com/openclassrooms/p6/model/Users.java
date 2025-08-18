@@ -40,4 +40,7 @@ public class Users {
     @Column(name = "updatedat", columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", nullable = false)
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @Column(name = "passwordchangedat")
+    private LocalDateTime passwordChangedAt;
 }

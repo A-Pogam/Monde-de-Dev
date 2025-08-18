@@ -14,9 +14,6 @@ import { Message } from '@core/types/message.type';
 import { Subscription } from 'rxjs';
 import { WebStorage } from '@lephenix47/webstorage-utility';
 
-/**
- * Component representing the user profile and settings page
- */
 @Component({
   selector: 'app-user',
   standalone: true,
@@ -25,205 +22,111 @@ import { WebStorage } from '@lephenix47/webstorage-utility';
   styleUrl: './user.component.scss',
 })
 export class UserComponent {
-  // * Services
-  /**
-   * Angular router service.
-   */
   private readonly router = inject(Router);
-
-  /**
-   * NgRx store service for managing application state.
-   */
   private readonly store = inject(Store);
-
-  /**
-   * Cookies service for managing browser cookies.
-   */
   private readonly cookiesService = inject(CookiesService);
-
-  /**
-   * User service for managing user data and authentication.
-   */
   private readonly userService = inject(UserService);
-
-  /**
-   * Topic service for managing topics and subscriptions.
-   */
   private readonly topicService = inject(TopicService);
-
-  /**
-   * Form builder service for creating Angular reactive forms.
-   */
   private readonly formBuilder = inject(FormBuilder);
 
-  // * Signals
-  /**
-   * Signal representing user basic information fetched from the store.
-   */
   public userInfo = toSignal<UserBasicInfo>(this.store.select('userInfo'));
-
-  /**
-   * Signal indicating whether topics are currently loading.
-   */
   public topicsAreLoading = toSignal<boolean>(this.topicService.isLoading$);
-
-  /**
-   * Signal indicating whether there was an error loading topics.
-   */
   public topicsHaveAnError = toSignal<boolean>(this.topicService.hasError$);
-
-  /**
-   * Signal containing the error message related to topics.
-   */
   public topicsErrorMessage = toSignal<string>(this.topicService.errorMessage$);
-
-  /**
-   * Signal indicating whether the user update operation is currently loading.
-   */
   public userUpdateIsLoading = toSignal<boolean>(this.userService.isLoading$);
-
-  /**
-   * Signal indicating whether there was an error updating user information.
-   */
   public userHasAnError = toSignal<boolean>(this.userService.hasError$);
-
-  /**
-   * Signal containing the error message related to user operations.
-   */
   public userErrorMessage = toSignal<string>(this.userService.errorMessage$);
 
-  /**
-   * String containing the success message after user operations.
-   */
   public userSuccessMessage: string = '';
-
-  /**
-   * Signal containing the array of subscribed topics.
-   */
   public topicsArray = signal<Topic[]>([]);
 
-  /**
-   * Form group for user credentials, including username and email.
-   */
-public readonly userCredentialsForm = this.formBuilder.group({
-  username: [this.userInfo()?.username, Validators.required],
-  email: [this.userInfo()?.email, [Validators.required]],
-  password: ['', [Validators.minLength(6)]],  // Validation mot de passe
-  confirmPassword: ['', [Validators.minLength(6)]],  // Validation confirmation mot de passe
-});
-
-// verifies if passwords match.
-get passwordsMatch() {
-  const password = this.userCredentialsForm.get('password')?.value;
-  const confirmPassword = this.userCredentialsForm.get('confirmPassword')?.value;
-  return password === confirmPassword;
-}
-
+  public readonly userCredentialsForm = this.formBuilder.group({
+    username: [this.userInfo()?.username, Validators.required],
+    email: [this.userInfo()?.email, [Validators.required, Validators.email]],
+    newPassword: ['', [Validators.minLength(8)]], // facultatif, un seul champ
+  });
 
   ngOnInit() {
     this.initializeTopicsArray();
   }
 
-  /**
-   * Fetches subscribed topics from the topic service.
-   * Subscribed topics are then stored in the topics array.
-   */
   private initializeTopicsArray = (): void => {
     const subscription: Subscription = this.topicService
       .getAllThemesWithSubscription()
       .subscribe((res: Topic[]) => {
-        const subscribedTopics: Topic[] = res.filter(
-          (t: Topic) => t.isSubscribed
-        );
-
-        this.topicsArray.update(() => {
-          return subscribedTopics;
-        });
-
+        const subscribedTopics: Topic[] = res.filter((t: Topic) => t.isSubscribed);
+        this.topicsArray.update(() => subscribedTopics);
         subscription.unsubscribe();
       });
   };
 
-  /**
-   * Handles the submission of the user credentials form.
-   * Updates user information based on the form input.
-   * @param {Event} event - The form submission event.
-   */
   onSubmit = (event: Event): void => {
-  event.preventDefault();
+    event.preventDefault();
+    this.userSuccessMessage = '';
 
-  this.userSuccessMessage = '';
+    const { username, email, newPassword } = this.userCredentialsForm.getRawValue();
 
-  const { username, email, password } = this.userCredentialsForm.getRawValue();
+    const profilePayload: any = {};
+    if (username) profilePayload.username = username.trim();
+    if (email) profilePayload.email = email.trim();
 
-  const userUpdateData: any = {};
+    const wantsProfileUpdate = !!(profilePayload.username || profilePayload.email);
+    const wantsPasswordChange = !!(newPassword && newPassword.trim().length > 0);
 
-  if (username) {
-    userUpdateData.username = username.trim();
-  }
-  if (email) {
-    userUpdateData.email = email.trim();
-  }
-  if (password) {
-    userUpdateData.password = password.trim();
-  }
-
-  console.log('Data to update:', userUpdateData);  
-
-  this.userService.updateUser(userUpdateData).subscribe(
-    (result: Message) => {
-      this.userSuccessMessage = result.message;
-      console.log('Update Success:', this.userSuccessMessage);
-    },
-    (error) => {
-      console.error('Update failed:', error);
+    if (wantsProfileUpdate && wantsPasswordChange) {
+      this.userService.updateUser(profilePayload).subscribe(
+        () => {
+          this.userService.changePassword({ newPassword: newPassword!.trim() }).subscribe(
+            (msg: Message) => {
+              this.userSuccessMessage = msg.message || 'Password updated. Please log in again.';
+              this.logout(); 
+            },
+            (err) => console.error('Password change failed:', err)
+          );
+        },
+        (err) => console.error('Profile update failed:', err)
+      );
+      return;
     }
-  );
-};
 
+    if (wantsPasswordChange) {
+      this.userService.changePassword({ newPassword: newPassword!.trim() }).subscribe(
+        (msg: Message) => {
+          this.userSuccessMessage = msg.message || 'Password updated. Please log in again.';
+          this.logout(); 
+        },
+        (err) => console.error('Password change failed:', err)
+      );
+      return;
+    }
 
+    if (wantsProfileUpdate) {
+      this.userService.updateUser(profilePayload).subscribe(
+        (msg: Message) => {
+          this.userSuccessMessage = msg.message || 'Successfully updated user profile!';
+        },
+        (err) => console.error('Profile update failed:', err)
+      );
+      return;
+    }
 
+    this.userSuccessMessage = 'Aucune modification détectée.';
+  };
 
-
-
-
-  /**
-   * Logs out the user by deleting the JWT token and redirecting to the home page.
-   *
-   * Also resets the local storage article-creation object for the article page
-   */
   logout = (): void => {
     this.cookiesService.deleteJwt();
-
-    WebStorage.setKey('article-creation', {
-      themeId: '1',
-      title: '',
-      description: '',
-    });
-
+    WebStorage.setKey('article-creation', { themeId: '1', title: '', description: '' });
     this.router.navigate(['/']);
   };
 
-  /**
-   * Toggles the user's subscription to a topic.
-   * @param {number} id - The ID of the topic to subscribe or unsubscribe.
-   */
   updateUserThemeSubscription = (id: number) => {
     this.updateTopicsArray(id);
-
-    const subscription: Subscription = this.topicService
-      .unsubscribeToTheme(id)
-      .subscribe(() => {
-        this.updateTopicsArray(id);
-
-        subscription.unsubscribe();
-      });
+    const subscription: Subscription = this.topicService.unsubscribeToTheme(id).subscribe(() => {
+      this.updateTopicsArray(id);
+      subscription.unsubscribe();
+    });
   };
 
-  /**
-   * Updates the topics array by removing the specified topic.
-   * @param {number} id - The ID of the topic to remove from the array.
-   */
   private updateTopicsArray = (id: number): void => {
     this.topicsArray.update((topics) => topics.filter((t) => t.id !== id));
   };

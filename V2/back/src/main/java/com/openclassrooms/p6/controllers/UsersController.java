@@ -36,6 +36,7 @@ public class UsersController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    public static record ChangePasswordRequest(String newPassword) {}
 
     @GetMapping("")
     public ResponseEntity<?> getUserInfo(Authentication authentication) {
@@ -74,7 +75,6 @@ public class UsersController {
                     return ResponseEntity.status(HttpStatus.CONFLICT)
                             .body(new MessageResponse("The new email is already taken!"));
                 }
-
                 user.setEmail(request.email());
             }
 
@@ -82,22 +82,39 @@ public class UsersController {
                 user.setUsername(request.username());
             }
 
-            if (request.password() != null && !request.password().isEmpty()) {
-                String encodedPassword = userService.encodePassword(request.password());
-                user.setPassword(encodedPassword);
-            }
-
             userService.saveUser(user);
 
-            return ResponseEntity.ok(new MessageResponse("Successfully changed the user credentials!"));
+            return ResponseEntity.ok(new MessageResponse("Successfully updated user profile!"));
 
         } catch (ApiException e) {
             return GlobalExceptionHandler.handleApiException(e);
         }
     }
 
+    @PutMapping("/password")
+    public ResponseEntity<?> changePassword(
+            @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+        try {
+            Long userId = Long.parseLong((String) authentication.getPrincipal());
 
+            if (request == null || request.newPassword() == null || request.newPassword().isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new MessageResponse("New password must not be empty."));
+            }
+            if (request.newPassword().length() < 8) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new MessageResponse("New password must be at least 8 characters."));
+            }
 
+            userService.changePassword(userId, /* currentPassword unused */ null, request.newPassword());
+
+            return ResponseEntity.ok(new MessageResponse("Password updated. Please log in again."));
+
+        } catch (ApiException e) {
+            return GlobalExceptionHandler.handleApiException(e);
+        }
+    }
 
     private void checkBodyPayloadErrors(BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -123,6 +140,4 @@ public class UsersController {
                         HttpStatus.NOT_FOUND,
                         LocalDateTime.now()));
     }
-
-
 }

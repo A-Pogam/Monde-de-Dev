@@ -57,13 +57,22 @@ export class UserService extends ApiService {
 
   return this.fetchPut<Message>(this.API_PATHNAME, updatedUser).pipe(
     tap((response) => {
-      console.log('Response from server:', response); // Affiche la réponse pour vérifier
+      console.log('Response from server:', response); 
       this.updateLoadingState(response);
     }),
     catchError(this.handleErrors)
   );
 };
 
+  public changePassword = (payload: { newPassword: string }): Observable<Message> => {
+    this.isLoading$.next(true);
+    return this.fetchPut<Message>(`${this.API_PATHNAME}/password`, payload).pipe(
+      tap((response) => {
+        this.updateLoadingState(response);
+      }),
+      catchError(this.handleErrors)
+    );
+  };
 
   /**
    * Updates the loading state.

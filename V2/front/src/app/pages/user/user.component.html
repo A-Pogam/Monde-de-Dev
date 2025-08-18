@@ -4,37 +4,28 @@
   <form class="user__form" [formGroup]="userCredentialsForm" (ngSubmit)="onSubmit($event)">
     <fieldset class="user__fieldset">
       <input type="text" class="user__input" formControlName="username" autocomplete="username"
-        value="{{userInfo()?.username}}" />
-
+             [value]="userInfo()?.username" />
       <input type="email" class="user__input" formControlName="email" autocomplete="email"
-        value="{{userInfo()?.email}}" />
+             [value]="userInfo()?.email" />
 
-      <!-- Ajout du champ mot de passe -->
-      <input type="password" class="user__input" formControlName="password" autocomplete="new-password"
-        placeholder="Nouveau mot de passe" />
-
-      <!-- Confirmer le mot de passe -->
-      <input type="password" class="user__input" formControlName="confirmPassword" autocomplete="new-password"
-        placeholder="Confirmer le mot de passe" />
+      <input type="password" class="user__input" formControlName="newPassword"
+             autocomplete="new-password" placeholder="Nouveau mot de passe" />
     </fieldset>
 
     <button type="submit" class="user__submit-button">Sauvegarder</button>
   </form>
 
-  <!-- Chargement, erreur et succès -->
   <div *ngIf="userUpdateIsLoading()">
     <app-spin-loader></app-spin-loader>
     <p class="user__loading">En attente...</p>
   </div>
 
   <div *ngIf="userHasAnError()">
-    <p class="user__error">Une erreur est survenue: <br /> {{userErrorMessage()}}</p>
+    <p class="user__error">Une erreur est survenue: <br /> {{ userErrorMessage() }}</p>
   </div>
   <div *ngIf="!userHasAnError() && userSuccessMessage">
-    <p class="user__success">{{userSuccessMessage}}</p>
+    <p class="user__success">{{ userSuccessMessage }}</p>
   </div>
-
-  
 
   <button type="button" class="user__logout-button" (click)="logout()">Se déconnecter</button>
 
@@ -42,7 +33,9 @@
 
   <div class="user__subscriptions-container">
     <h2 class="user__subscriptions-title">Abonnements</h2>
-    <app-topics-container [onSubscriptionChange]="updateUserThemeSubscription"
-      [topicsArray]="topicsArray"></app-topics-container>
+    <app-topics-container
+      [onSubscriptionChange]="updateUserThemeSubscription"
+      [topicsArray]="topicsArray">
+    </app-topics-container>
   </div>
 </section>
