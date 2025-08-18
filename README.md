@@ -52,32 +52,33 @@ logging.level.org.springframework.boot.web.embedded.tomcat=INFO
 ```
 
 
-### Installation
-#### Backend (Spring Boot)
+## Installation
 
-Prérequis :
+### Backend (Spring Boot)
 
-Java 17+
+**Prérequis :**
+- Java 17+
+- Maven
+- MySQL en local
 
-Maven
-
-MySQL en local
-
-Démarrage :
-
+**Démarrage :**
+```bash
 cd backend
 mvn clean install
 mvn spring-boot:run
-
+```
 
 L’API sera disponible sur :
 http://localhost:3001
+
 
 #### Base de données (MySQL)
 
 Créer la base de données :
 
+```
 CREATE DATABASE MDD;
+```
 
 ##### Frontend (Angular)
 
@@ -89,10 +90,12 @@ Angular CLI
 
 Installation et lancement :
 
+
+```
 cd frontend
 npm install
 ng serve --open
-
+```
 
 L’application sera disponible sur :
 http://localhost:4200
