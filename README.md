@@ -52,8 +52,8 @@ logging.level.org.springframework.boot.web.embedded.tomcat=INFO
 ```
 
 
-Installation
-Backend (Spring Boot)
+### Installation
+#### Backend (Spring Boot)
 
 Prérequis :
 
@@ -73,13 +73,13 @@ mvn spring-boot:run
 L’API sera disponible sur :
 http://localhost:3001
 
-Base de données (MySQL)
+#### Base de données (MySQL)
 
 Créer la base de données :
 
 CREATE DATABASE MDD;
 
-Frontend (Angular)
+##### Frontend (Angular)
 
 Prérequis :
 
@@ -97,22 +97,15 @@ ng serve --open
 L’application sera disponible sur :
 http://localhost:4200
 
-Authentification
 
-Les utilisateurs s’inscrivent et se connectent via l’API.
-
-À la connexion, un JWT est renvoyé et stocké dans un cookie sécurisé.
-
-Ce token est utilisé pour accéder aux endpoints protégés (articles, thèmes, abonnements).
-
-API Endpoints (exemple)
-Auth
+#### API Endpoints 
+##### Auth
 
 POST /api/auth/register → inscription
 
 POST /api/auth/login → connexion
 
-User
+##### User
 
 GET /api/users/me → infos utilisateur connecté
 
@@ -120,7 +113,7 @@ PUT /api/users → mise à jour profil (username/email)
 
 PUT /api/users/password → changement de mot de passe
 
-Articles
+##### Articles
 
 GET /api/articles → liste des articles
 
@@ -128,7 +121,7 @@ POST /api/articles → créer un article
 
 GET /api/articles/{id} → détail d’un article
 
-Thèmes
+##### Thèmes
 
 GET /api/themes → liste des thèmes
 
