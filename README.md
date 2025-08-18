@@ -1,36 +1,34 @@
-***MDD Project – Mon Projet Fullstack (Spring Boot + Angular)***
+# MDD Project – Mon Projet Fullstack (Spring Boot + Angular)
 
-Description
+## Description
 
 Ce projet est une application web fullstack construite avec :
 
-Backend : Spring Boot 3 (API REST sécurisée avec JWT)
+- **Backend** : Spring Boot 3 (API REST sécurisée avec JWT)  
+- **Frontend** : Angular (application standalone avec NgRx, Signals, ReactiveForms)  
+- **Base de données** : MySQL  
+- **Authentification** : JSON Web Token (JWT)  
 
-Frontend : Angular (application standalone avec NgRx, Signals, ReactiveForms)
+### Fonctionnalités principales
 
-Base de données : MySQL
+- Gestion des utilisateurs (création, connexion, mise à jour, changement de mot de passe)  
+- Création et gestion des articles avec des thèmes  
+- Gestion des abonnements aux thèmes  
+- Authentification et autorisation via JWT  
 
-Auth : JSON Web Token (JWT)
+---
 
+## Configuration
 
-L’application permet de :
+### Fichier `application.properties`
 
-Gérer des utilisateurs (création, connexion, mise à jour, changement de mot de passe)
-
-Créer et gérer des articles avec des thèmes 
-
-Gérer les abonnements aux thèmes
-
-Authentification et autorisation via JWT
-
- Configuration
-Fichier application.properties
+```properties
 # MySQL Database Configuration
 spring.datasource.url=jdbc:mysql://localhost:3306/MDD
 spring.datasource.username=yourUsername
 spring.datasource.password=yourPassword
 
-# JWT Secret 
+# JWT Secret
 jwt.secret=ThisIsYourSuperSecretKeyThatIsLongEnoughToBeSafe1234567890abcDEF!!
 
 # JPA / Hibernate
@@ -52,8 +50,9 @@ logging.level.com.yourpackage=DEBUG
 logging.level.com.openclassrooms=INFO
 logging.level.org.springframework.boot.web.embedded.tomcat=INFO
 
- Installation
- Backend (Spring Boot)
+
+Installation
+Backend (Spring Boot)
 
 Prérequis :
 
@@ -70,11 +69,12 @@ mvn clean install
 mvn spring-boot:run
 
 
-L’API sera disponible sur http://localhost:3001
+L’API sera disponible sur :
+http://localhost:3001
 
 Base de données (MySQL)
 
-Créer une base de données :
+Créer la base de données :
 
 CREATE DATABASE MDD;
 
@@ -93,7 +93,8 @@ npm install
 ng serve --open
 
 
-L’application sera disponible sur http://localhost:4200
+L’application sera disponible sur :
+http://localhost:4200
 
 Authentification
 
