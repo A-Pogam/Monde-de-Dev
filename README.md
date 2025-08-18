@@ -48,7 +48,7 @@ logging.level.root=INFO
 logging.level.org.springframework=INFO
 logging.level.com.yourpackage=DEBUG
 logging.level.com.openclassrooms=INFO
-logging.level.org.springframework.boot.web.embedded.tomcat=INFO
+logging.level.org.springframework.boot.web.embedded.tomcat=INFO```
 
 
 Installation
