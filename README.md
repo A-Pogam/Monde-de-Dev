@@ -1,4 +1,4 @@
-📖 MDD Project – Mon Projet Fullstack (Spring Boot + Angular)
+***MDD Project – Mon Projet Fullstack (Spring Boot + Angular)***
 
 Description
 
